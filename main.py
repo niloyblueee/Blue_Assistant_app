@@ -8,6 +8,7 @@ import customtkinter
 from  googlesearch import search
 import speech_recognition
 import pyttsx3 as tts 
+from youtubesearchpython import VideosSearch
 
 class Assistant:
 
@@ -31,8 +32,10 @@ class Assistant:
         self.window.mainloop()
 
     def search(self,text):    
+        print("In search  method")
         for i in search(text,tld='com',num=1,stop=1,pause=2) :
             #wb.open(i)
+            print(i)
             wb.open_new_tab(i)
             
     def run_assistant(self):
@@ -68,15 +71,24 @@ class Assistant:
                             self.speaker.runAndWait()
                             self.window.destroy()
                             os._exit(0)
-                    
+                            break 
 
                         elif "play" in text :
+
                             self.speaker.say(f"okay trying to play {text[4:]}")
                             self.speaker.runAndWait()
                             self.label.configure(text_color="red")
                             print("searching")
                             print(text)
-                            self.search(text)
+
+                            #self.search(text) <==== method 1
+                            #wb.open_new_tab(f"https://www.youtube.com/results?search_query={text}") <==== method 2
+                            
+                            videosSearch = VideosSearch(text, limit=1) #<==== method 3
+                            first_result = videosSearch.result()['result'][0]['link']
+                            print(first_result)
+                            wb.open_new_tab(first_result)
+
                             self.label.configure(text_color="white") 
 
                         elif text == "turn off pc" :
