@@ -2,7 +2,6 @@ import webbrowser as wb
 import os
 from AppOpener import open
 from AppOpener import close
-#from  neuralintents import BasicAssistant
 import sys
 import threading
 import customtkinter 
@@ -37,15 +36,21 @@ class Assistant:
             wb.open_new_tab(i)
             
     def run_assistant(self):
+        active = False
         while True:
             try:
                 with speech_recognition.Microphone() as mic :
+                    print("in here > things started")
                     self.recognizer.adjust_for_ambient_noise(mic, duration=0.1)
+                    print("in here2 > aactively listening")
                     audio = self.recognizer.listen(mic)
+                    print("in here3 > listened")
                     text = self.recognizer.recognize_google(audio)
                     text= text.lower()
+                    print(f"Recognized ---> {text}")
                     if "hey blue" in text:
                         print("initiated")
+                        active = True #active or not
                         self.speaker.say("hello, how may i help?")
                         self.label.configure(text_color="#0eb9ff")
                         self.speaker.runAndWait()
@@ -53,14 +58,16 @@ class Assistant:
                         text = self.recognizer.recognize_google(audio)
                         text = text.lower()
                         print("recognized audio")
-                   
+                    
+                    if active is True:
+
                         if text == 'stop':
                             print("stoping")
                             self.speaker.say("Certainly")
+                            active = False
                             self.speaker.runAndWait()
-                            self.speaker.stop()
                             self.window.destroy()
-                            sys.exit()
+                            os._exit(0)
                     
 
                         elif "play" in text :
@@ -88,6 +95,7 @@ class Assistant:
                                 
                         elif text == "who created you" :
                             self.speaker.say("Mr.NiloyBlueee created me!")
+                            wb.open_new_tab("https://www.linkedin.com/in/niloy-blueee-30787b294/")
                             self.label.configure(text_color="white")
                             self.speaker.runAndWait()
 
@@ -109,7 +117,7 @@ class Assistant:
                                                      
                         else:
                             print("searching.... "+ text)
-                            self.speaker.say("trying to find the best match")
+                            self.speaker.say(f"trying to find the best match for {text}")
                             self.speaker.runAndWait()
                             self.search(text)
                             self.label.configure(text_color="white") 
