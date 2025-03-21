@@ -31,12 +31,13 @@ class Assistant:
 
         self.window.mainloop()
 
-    def search(self,text):    
+    def Search(self,text, sleep_interval=5):    
         print("In search  method")
-        for i in search(text,tld='com',num=1,stop=1,pause=2) :
+        for i in search(text, num_results=1) :
             #wb.open(i)
             print(i)
             wb.open_new_tab(i)
+            break
             
     def run_assistant(self):
         active = False
@@ -131,7 +132,7 @@ class Assistant:
                             print("searching.... "+ text)
                             self.speaker.say(f"trying to find the best match for {text}")
                             self.speaker.runAndWait()
-                            self.search(text)
+                            self.Search(text)
                             self.label.configure(text_color="white") 
 
             except:
