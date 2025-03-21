@@ -86,7 +86,7 @@ class Assistant:
                             #    self.label.configure(text_color="white") 
                             #    self.speaker.runAndWait()
                                 
-                        elif text == "who created you?" :
+                        elif text == "who created you" :
                             self.speaker.say("Mr.NiloyBlueee created me!")
                             self.label.configure(text_color="white")
                             self.speaker.runAndWait()
