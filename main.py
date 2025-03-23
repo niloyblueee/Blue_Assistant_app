@@ -31,13 +31,27 @@ class Assistant:
 
         self.window.mainloop()
 
-    def Search(self,text, sleep_interval=5):    
-        print("In search  method")
-        for i in search(text, num_results=1) :
-            #wb.open(i)
-            print(i)
-            wb.open_new_tab(i)
-            break
+
+    def Search(self, text):    
+        print("In Search method")
+        found = False
+        try:
+            for i in search(text, num_results=2, sleep_interval=5):
+                if i and i.startswith("http"):  # Only open full URLs
+                    print("Found result:", i)
+                    wb.open_new_tab(i)
+                    found = True
+                else:
+                    print("Skipping invalid result:", i)
+        except Exception as e:
+            print("Search failed:", e)
+
+        if not found:
+            print("No valid results found or search was blocked.")
+
+
+
+            
             
     def run_assistant(self):
         active = False
@@ -46,7 +60,7 @@ class Assistant:
                 with speech_recognition.Microphone() as mic :
                     print("in here > things started")
                     self.recognizer.adjust_for_ambient_noise(mic, duration=0.1)
-                    print("in here2 > aactively listening")
+                    print("in here2 > actively listening")
                     audio = self.recognizer.listen(mic)
                     print("in here3 > listened")
                     text = self.recognizer.recognize_google(audio)
