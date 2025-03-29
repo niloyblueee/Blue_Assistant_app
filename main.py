@@ -9,7 +9,7 @@ from  googlesearch import search
 import speech_recognition
 import pyttsx3 as tts 
 from youtubesearchpython import VideosSearch
-from sympy import sympify, sin, cos, tan, pi, symbols, log , ln
+from sympy import sympify, sin, cos, tan, pi, symbols, log , ln, acos, asin, atan, factorial
 from sympy.parsing.sympy_parser import parse_expr
 
 
@@ -32,6 +32,8 @@ class Assistant:
         threading.Thread(target=self.run_assistant).start()
         self.window.mainloop()
 
+
+
     def evaluate_expression(self, expression):
         # replace "degrees" with "*pi/180" to convert to radians
         #expression = expression.replace("degrees", "*pi/180")
@@ -44,7 +46,11 @@ class Assistant:
         "tan": tan,
         "pi": pi,
         "log": log,
-        "ln" : ln
+        "ln" : ln,
+        "asin" :asin,
+        "acos" :acos,
+        "atan" :atan,
+        "factorial" : factorial,
         }
 
         expr = parse_expr(expression, evaluate=True, local_dict=local_dict)
@@ -80,7 +86,7 @@ class Assistant:
         'multiplied by': '*',
         'equal to': '=',
         'square root of': 'sqrt',
-        'cube root of': 'cbrt',
+        'cube root of': 'cbrt'
 
         }
 
@@ -88,17 +94,18 @@ class Assistant:
             expr = expr.replace(phrase, symbol)
 
         words_to_ops = {
-            'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied by': '*',
+            'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
             'divided by': '/', 'over': '/', 'mod': '%', 'modulo': '%','by': '/',
             'power': '**', 'to the power of': '**', 'into': '*',
             'equals': '=', 'equal to': '=',
 
             'sin': 'sin', 'cosine': 'cos', 'cos': 'cos' , 'tangent': 'tan', 'tan':'tan',
             'pi': 'pi' ,
-            'log': 'log',         # log base 10
+            'log': 'log',        # log base 10
             'natural log': 'ln',  # ln = natural logarithm
             'loan': 'ln',
-            'lon': 'ln'
+            'lon': 'ln','sin inverse': 'asin', 'cos inverse': 'acos', 'tan inverse': 'atan',
+            'antilog': '10 **'
         }
 
         # Fix sin/cos/tan so it becomes sin(45 * pi/180) etc.
@@ -106,11 +113,16 @@ class Assistant:
             expr = expr.replace(word, symbol)
             
         # Convert "sin 30 degrees" to "sin(30 * pi / 180)"
-        expr = re.sub(r'(sin|cos|tan)\s+(\d+)', r'\1(\2 * pi / 180)', expr)
+        #expr = re.sub(r'(sin|cos|tan|asin|acos|atan)\s+(\d+)', r'\1(\2 * pi / 180)', expr)
 
         # Fix expressions like "sin pi by 180", "cos pi by 90", etc.
-        expr = re.sub(r'(sin|cos|tan)(?:\s+of)?\s+pi\s+by\s+(\d+)', r'\1(pi / \2)', expr)
+        expr = re.sub(r'(sin|cos|tan|asin|acos|atan)(?:\s+of)?\s+pi\s+by\s+(\d+)', r'\1(pi / \2)', expr)
 
+        #fix of inverse with fractions
+        expr = re.sub(r'(sin|cos|tan|asin|acos|atan)\s+([0-9]+(?:\.[0-9]+)?)', r'\1(\2 * pi / 180)', expr)
+
+        # Fix cases like "factorial 5" or "factorial 0.5"
+        expr = re.sub(r'factorial\s+(\d+(\.\d+)?)', r'factorial(\1)', expr)
 
         # Convert "log 100" to "log(100, 10)"
         expr = re.sub(r'\blog\s+([\d\.]+)', r'log(\1, 10)', expr)
@@ -132,6 +144,9 @@ class Assistant:
 
         # Cleanup extra spaces
         expr = re.sub(r'\s+', ' ', expr).strip()
+        
+        # Fix cases like: factorial 5 → factorial(5)
+        expr = re.sub(r'factorial\s+(\d+)', r'factorial(\1)', expr)
 
         # Fix "sin 30" → "sin(30 * pi / 180)"
         expr = re.sub(r'(sin|cos|tan)\s+([\d\.]+)', r'\1(\2 * pi / 180)', expr)
@@ -143,7 +158,9 @@ class Assistant:
         expr = expr.replace('degrees', '')
         expr = expr.replace('degree', '')
         expr = expr.replace('°', '')
-        
+        #remove X for *
+        expr = expr.replace(" x ", " * ")
+
         return expr
 
 
@@ -227,9 +244,9 @@ class Assistant:
                                     self.speaker.runAndWait()
                         
                         
-                        elif "calculate" in text or "how much is" in text:
+                        elif "calculate" in text or "how much is" in text :
                             try:
-                                expression = text.replace("calculate", "").replace("what is", "").replace("how much is", "").strip()
+                                expression = text.replace("calculate", "").replace("how much is", "").strip()
                                 expression = self.spoken_to_math(expression)
                                 print("Parsed Expression:", expression)
 
@@ -244,7 +261,54 @@ class Assistant:
                                 self.speaker.say("Sorry, I couldn't calculate that.")
                                 self.speaker.runAndWait()
 
+                        elif text.startswith("what is"):  # Only checking "what is" questions
+                            expression = text.replace("what is", "").strip()
+                            math_keywords = { 
+                            'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
+                            'divided by': '/', 'over': '/', 'mod': '%', 'modulo': '%','by': '/',
+                            'power': '**', 'to the power of': '**', 'into': '*',
+                            'equals': '=', 'equal to': '=',
+                            '+': '+',  
+                            '-': '-', 
+                            'x': '*', 
+                            '/': '/',
+                            
+                            'sin': 'sin', 'cosine': 'cos', 'cos': 'cos' , 'tangent': 'tan', 'tan':'tan',
+                            'pi': 'pi' ,
+                            'log': 'log',        # log base 10
+                            'natural log': 'ln',  # ln = natural logarithm
+                            'loan': 'ln',
+                            'lon': 'ln','sin inverse': 'asin', 'cos inverse': 'acos', 'tan inverse': 'atan',
+                            'antilog': '10 **',        'to the power of': '**',
+                            'to the power ' : '**',
+                            'divided by': '/',
+                            'multiplied by': '*',
+                            'equal to': '=',
+                            'square root of': 'sqrt',
+                            'cube root of': 'cbrt',
+                            'factorial' : 'factorial'
+                            }
+
+                            # Check if the expression contains a math-related word
+                            if any(word in expression.split() for word in math_keywords):
+                                # Call your math evaluation function
+                                expression = self.spoken_to_math(expression)  # Convert to math syntax
+                                print("Parsed Expression:", expression)
                                 
+                                try:
+                                    result = self.evaluate_expression(expression)
+                                    print(round(result,2))
+                                    self.speaker.say(f"The result is {round(result, 2)}")
+                                    self.speaker.runAndWait()
+                                    self.label.configure(text_color="#FFD700")
+                                except Exception as e:
+                                    print("Math error:", e)
+                                    self.speaker.say("Sorry, I couldn't calculate that.")
+                                    self.speaker.runAndWait
+                            else:
+                                # If it's not a math query, do a Google search
+                                self.Search(text)
+        
                         elif text == "who created you" :
                             self.speaker.say("Mr.NiloyBlueee created me!")
                             wb.open_new_tab("https://www.linkedin.com/in/niloy-blueee-30787b294/")
@@ -279,4 +343,5 @@ class Assistant:
                 continue          
 
 Assistant()
+
                 
