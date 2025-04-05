@@ -11,7 +11,7 @@ import pyttsx3 as tts
 from youtubesearchpython import VideosSearch
 from sympy import sympify, sin, cos, tan, pi, symbols, log , ln, acos, asin, atan, factorial
 from sympy.parsing.sympy_parser import parse_expr
-
+import requests
 
 class Assistant:
 
@@ -164,8 +164,105 @@ class Assistant:
         return expr
 
 
+    def get_location_key(self, city_name, api_key):
+        url = f"http://dataservice.accuweather.com/locations/v1/cities/search"
+        params = {
+            "apikey": api_key,
+            "q": city_name
+        }
+        response = requests.get(url, params=params)
+        data = response.json()
+        if data:
+            return data[0]['Key'], data[0]['LocalizedName']
+        return None, None
 
-            
+    def get_weather(self,city_name, api_key):
+        key, localized_name = self.get_location_key(city_name, api_key)
+        if not key:
+            return f"Couldn't find weather for {city_name}"
+        
+        url = f"http://dataservice.accuweather.com/currentconditions/v1/{key}"
+        params = {
+            "apikey": api_key,
+            "details": "true"
+        }
+        response = requests.get(url, params=params)
+        weather_data = response.json()
+        
+        if weather_data:
+            weather = weather_data[0]
+            print(weather)
+            text = weather['WeatherText']
+            temp = weather['Temperature']['Metric']['Value']
+            print(f"The current weather in {localized_name} is {text} with a temperature of {temp}°C.")
+            return f"The current weather in {localized_name} is {text} with a temperature of {temp}°C."
+        
+        return f"Weather info for {city_name} is unavailable."
+
+
+    def handle_weather(self, user_text):
+        api_key = "N6f3inYvZxWJs10rlJD9Az81Qzm04BEM"
+
+        # Ask the user for the city
+        self.speaker.say("I don't access your location. Please tell me which city's weather you want.")
+        self.speaker.runAndWait()
+
+        try:
+            with speech_recognition.Microphone() as mic:
+                self.recognizer.adjust_for_ambient_noise(mic, duration=0.2)
+                audio = self.recognizer.listen(mic)
+                city = self.recognizer.recognize_google(audio).lower()
+                print("Recognized city:", city)
+        except speech_recognition.UnknownValueError:
+            self.speaker.say("Sorry, I couldn't understand the city name. Please try again.")
+            self.speaker.runAndWait()
+            return  # exit early if city can't be understood
+
+        # Step 1: Get Location Key
+        try:
+            location_url = f"http://dataservice.accuweather.com/locations/v1/cities/search"
+            params = {"apikey": api_key, "q": city}
+            loc_response = requests.get(location_url, params=params)
+            location_data = loc_response.json()
+
+            if not location_data:
+                self.speaker.say("I couldn't find that city. Try a different one.")
+                self.speaker.runAndWait()
+                return
+
+            location_key = location_data[0]['Key']
+            city_name = location_data[0]['LocalizedName']
+
+            # Step 2: Get Current Weather
+            weather_url = f"http://dataservice.accuweather.com/currentconditions/v1/{location_key}"
+            params = {"apikey": api_key, "details": "true"}
+            weather_response = requests.get(weather_url, params=params)
+            weather_data = weather_response.json()
+
+            if weather_data:
+                weather_text = weather_data[0]['WeatherText']
+                temperature = weather_data[0]['Temperature']['Metric']['Value']
+                weather_report = f"The current weather in {city_name} is {weather_text} with a temperature of {temperature}°C."
+                
+                # Handle umbrella/sunshine responses
+                if any(x in user_text for x in ["sunny", "raining", "umbrella", "cloudy", "rain"]):
+                    if "rain" or "umbrella" or "raining" in weather_text.lower():
+                        self.speaker.say("Yes, it looks like it's raining. You should take an umbrella.")
+                    elif "sun" in weather_text.lower():
+                        self.speaker.say("Yes, it's sunny outside.")
+                    else:
+                        self.speaker.say(f"The weather in {city_name} is currently {weather_text}.")
+                else:
+                    self.speaker.say(weather_report)
+                self.speaker.runAndWait()
+            else:
+                self.speaker.say("Sorry, I couldn't retrieve the weather data.")
+                self.speaker.runAndWait()
+        except Exception as e:
+            print("Weather error:", e)
+            self.speaker.say("There was an error getting the weather.")
+            self.speaker.runAndWait()
+    
             
     def run_assistant(self):
         active = False
@@ -263,52 +360,60 @@ class Assistant:
 
                         elif text.startswith("what is"):  # Only checking "what is" questions
                             expression = text.replace("what is", "").strip()
-                            math_keywords = { 
-                            'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
-                            'divided by': '/', 'over': '/', 'mod': '%', 'modulo': '%','by': '/',
-                            'power': '**', 'to the power of': '**', 'into': '*',
-                            'equals': '=', 'equal to': '=',
-                            '+': '+',  
-                            '-': '-', 
-                            'x': '*', 
-                            '/': '/',
                             
-                            'sin': 'sin', 'cosine': 'cos', 'cos': 'cos' , 'tangent': 'tan', 'tan':'tan',
-                            'pi': 'pi' ,
-                            'log': 'log',        # log base 10
-                            'natural log': 'ln',  # ln = natural logarithm
-                            'loan': 'ln',
-                            'lon': 'ln','sin inverse': 'asin', 'cos inverse': 'acos', 'tan inverse': 'atan',
-                            'antilog': '10 **',        'to the power of': '**',
-                            'to the power ' : '**',
-                            'divided by': '/',
-                            'multiplied by': '*',
-                            'equal to': '=',
-                            'square root of': 'sqrt',
-                            'cube root of': 'cbrt',
-                            'factorial' : 'factorial'
-                            }
-
-                            # Check if the expression contains a math-related word
-                            if any(word in expression.split() for word in math_keywords):
-                                # Call your math evaluation function
-                                expression = self.spoken_to_math(expression)  # Convert to math syntax
-                                print("Parsed Expression:", expression)
-                                
-                                try:
-                                    result = self.evaluate_expression(expression)
-                                    print(round(result,2))
-                                    self.speaker.say(f"The result is {round(result, 2)}")
-                                    self.speaker.runAndWait()
-                                    self.label.configure(text_color="#FFD700")
-                                except Exception as e:
-                                    print("Math error:", e)
-                                    self.speaker.say("Sorry, I couldn't calculate that.")
-                                    self.speaker.runAndWait
+                            if "weather" in expression or any(word in expression for word in ["sunny", "rainy", "umbrella", "hot", "cold", "temperature","raining"]):
+                                self.handle_weather(expression)
                             else:
-                                # If it's not a math query, do a Google search
-                                self.Search(text)
-        
+                                math_keywords = { 
+                                    'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
+                                    'divided by': '/', 'over': '/', 'mod': '%', 'modulo': '%','by': '/',
+                                    'power': '**', 'to the power of': '**', 'into': '*',
+                                    'equals': '=', 'equal to': '=',
+                                    '+': '+',  
+                                    '-': '-', 
+                                    'x': '*', 
+                                    '/': '/',
+                                    
+                                    'sin': 'sin', 'cosine': 'cos', 'cos': 'cos' , 'tangent': 'tan', 'tan':'tan',
+                                    'pi': 'pi' ,
+                                    'log': 'log',        # log base 10
+                                    'natural log': 'ln',  # ln = natural logarithm
+                                    'loan': 'ln',
+                                    'lon': 'ln','sin inverse': 'asin', 'cos inverse': 'acos', 'tan inverse': 'atan',
+                                    'antilog': '10 **',        'to the power of': '**',
+                                    'to the power ' : '**',
+                                    'divided by': '/',
+                                    'multiplied by': '*',
+                                    'equal to': '=',
+                                    'square root of': 'sqrt',
+                                    'cube root of': 'cbrt',
+                                    'factorial' : 'factorial'
+                                }
+
+                                # Check if the expression contains a math-related word
+                                if any(word in expression.split() for word in math_keywords):
+                                    # Call your math evaluation function
+                                    expression = self.spoken_to_math(expression)  # Convert to math syntax
+                                    print("Parsed Expression:", expression)
+                                    
+                                    try:
+                                        result = self.evaluate_expression(expression)
+                                        print(round(result,2))
+                                        self.speaker.say(f"The result is {round(result, 2)}")
+                                        self.speaker.runAndWait()
+                                        self.label.configure(text_color="#FFD700")
+                                    except Exception as e:
+                                        print("Math error:", e)
+                                        self.speaker.say("Sorry, I couldn't calculate that.")
+                                        self.speaker.runAndWait
+                                
+                                else:
+                                    # If it's not a math query, do a Google search
+                                    self.Search(text)
+                        
+                        elif "umbrella" and "take" in text:
+                            self.handle_weather(text)
+
                         elif text == "who created you" :
                             self.speaker.say("Mr.NiloyBlueee created me!")
                             wb.open_new_tab("https://www.linkedin.com/in/niloy-blueee-30787b294/")
@@ -329,7 +434,36 @@ class Assistant:
                             self.speaker.runAndWait()
                             self.label.configure(text_color="#880808")
                             close(text.split()[1])
-                            self.label.configure(text_color="white") 
+                            self.label.configure(text_color="white")
+
+                        elif "weather" in text.lower():
+                            self.speaker.say("I don't access your location. Please tell me which city's weather you want.")
+                            self.speaker.runAndWait()
+
+                            try:
+                                with speech_recognition.Microphone() as mic:
+                                    print("Listening for city name...")
+                                    self.label.configure(text_color="cyan")
+                                    self.recognizer.adjust_for_ambient_noise(mic, duration=0.1)
+                                    audio = self.recognizer.listen(mic)
+                                    city = self.recognizer.recognize_google(audio)
+                                    city = city.lower().strip()
+                                    print(f"City recognized ---> {city}")
+
+                                    # Now call the weather function
+                                    weather_report = self.get_weather(city, "N6f3inYvZxWJs10rlJD9Az81Qzm04BEM")
+                                    self.speaker.say(weather_report)
+                                    self.speaker.runAndWait()
+
+                            except speech_recognition.UnknownValueError:
+                                self.speaker.say("Sorry, I couldn't understand the city name.")
+                                self.speaker.runAndWait()
+                            except Exception as e:
+                                print("Weather error:", e)
+                                self.speaker.say("Something went wrong while getting the weather.")
+                                self.speaker.runAndWait()
+
+ 
                                                      
                         else:
                             print("searching.... "+ text)
