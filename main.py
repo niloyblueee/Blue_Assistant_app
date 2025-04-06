@@ -12,7 +12,7 @@ from youtubesearchpython import VideosSearch
 from sympy import sympify, sin, cos, tan, pi, symbols, log , ln, acos, asin, atan, factorial
 from sympy.parsing.sympy_parser import parse_expr
 import requests
-
+from datetime import datetime
 class Assistant:
 
     def __init__(self):
@@ -363,6 +363,22 @@ class Assistant:
                             
                             if "weather" in expression or any(word in expression for word in ["sunny", "rainy", "umbrella", "hot", "cold", "temperature","raining"]):
                                 self.handle_weather(expression)
+
+                            elif "time" in expression:
+                                now = datetime.now()
+                                current_time = now.strftime("%I:%M %p")
+                                print("Time:", current_time)
+                                self.speaker.say(f"The current time is {current_time}")
+                                self.speaker.runAndWait()
+
+                            # 📅 Date check
+                            elif "date" in expression or "day" in expression:
+                                today = datetime.now().strftime("%A, %B %d, %Y")
+                                print("Date:", today)
+                                self.speaker.say(f"Today is {today}")
+                                self.speaker.runAndWait()
+
+                                
                             else:
                                 math_keywords = { 
                                     'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
@@ -462,6 +478,21 @@ class Assistant:
                                 print("Weather error:", e)
                                 self.speaker.say("Something went wrong while getting the weather.")
                                 self.speaker.runAndWait()
+
+                        
+
+                        elif "time" in text.lower():
+                            now = datetime.now()
+                            current_time = now.strftime("%I:%M %p")
+                            print("Time:", current_time)
+                            self.speaker.say(f"The current time is {current_time}")
+                            self.speaker.runAndWait()
+
+                        elif "date" in text.lower() or "day" in text.lower():
+                            today = datetime.now().strftime("%A, %B %d, %Y")
+                            print("Date:", today)
+                            self.speaker.say(f"Today is {today}")
+                            self.speaker.runAndWait()
 
  
                                                      
