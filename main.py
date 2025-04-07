@@ -458,34 +458,7 @@ class Assistant:
                             self.label.configure(text_color="white")
 
                         elif "weather" in text.lower():
-                            self.speaker.say("I don't access your location. Please tell me which city's weather you want.")
-                            self.speaker.runAndWait()
-
-                            try:
-                                with speech_recognition.Microphone() as mic:
-                                    print("Listening for city name...")
-                                    self.label.configure(text_color="cyan")
-                                    self.recognizer.adjust_for_ambient_noise(mic, duration=0.1)
-                                    audio = self.recognizer.listen(mic)
-                                    city = self.recognizer.recognize_google(audio)
-                                    if not "cancel" or "stop" in city :     
-                                        city = city.lower().strip()
-                                        print(f"City recognized ---> {city}")
-
-                                        # Now call the weather function
-                                        weather_report = self.get_weather(city, "N6f3inYvZxWJs10rlJD9Az81Qzm04BEM")
-                                        self.speaker.say(weather_report)
-                                        self.speaker.runAndWait()
-                                    else:
-                                        break
-                            except speech_recognition.UnknownValueError:
-                                self.speaker.say("Sorry, I couldn't understand the city name.")
-                                self.speaker.runAndWait()
-                            except Exception as e:
-                                print("Weather error:", e)
-                                self.speaker.say("Something went wrong while getting the weather.")
-                                self.speaker.runAndWait()                        
-
+                            self.handle_weather(text)
                         
 
                         elif "time" in text.lower():
