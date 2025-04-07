@@ -13,6 +13,11 @@ from sympy import sympify, sin, cos, tan, pi, symbols, log , ln, acos, asin, ata
 from sympy.parsing.sympy_parser import parse_expr
 import requests
 from datetime import datetime
+import json
+import re
+
+
+
 class Assistant:
 
     def __init__(self):
@@ -77,7 +82,7 @@ class Assistant:
 
     
     def spoken_to_math(self, expr):
-        import re
+        
 
         multi_word_ops = {
         'to the power of': '**',
@@ -463,21 +468,23 @@ class Assistant:
                                     self.recognizer.adjust_for_ambient_noise(mic, duration=0.1)
                                     audio = self.recognizer.listen(mic)
                                     city = self.recognizer.recognize_google(audio)
-                                    city = city.lower().strip()
-                                    print(f"City recognized ---> {city}")
+                                    if not "cancel" or "stop" in city :     
+                                        city = city.lower().strip()
+                                        print(f"City recognized ---> {city}")
 
-                                    # Now call the weather function
-                                    weather_report = self.get_weather(city, "N6f3inYvZxWJs10rlJD9Az81Qzm04BEM")
-                                    self.speaker.say(weather_report)
-                                    self.speaker.runAndWait()
-
+                                        # Now call the weather function
+                                        weather_report = self.get_weather(city, "N6f3inYvZxWJs10rlJD9Az81Qzm04BEM")
+                                        self.speaker.say(weather_report)
+                                        self.speaker.runAndWait()
+                                    else:
+                                        break
                             except speech_recognition.UnknownValueError:
                                 self.speaker.say("Sorry, I couldn't understand the city name.")
                                 self.speaker.runAndWait()
                             except Exception as e:
                                 print("Weather error:", e)
                                 self.speaker.say("Something went wrong while getting the weather.")
-                                self.speaker.runAndWait()
+                                self.speaker.runAndWait()                        
 
                         
 
