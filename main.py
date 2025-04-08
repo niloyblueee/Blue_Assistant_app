@@ -15,7 +15,8 @@ import requests
 from datetime import datetime
 import json
 import re
-
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+from comtypes import CLSCTX_ALL
 
 
 class Assistant:
@@ -37,7 +38,24 @@ class Assistant:
         threading.Thread(target=self.run_assistant).start()
         self.window.mainloop()
 
+    def adjust_volume(self, direction, percent):
+        devices = AudioUtilities.GetSpeakers()
+        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        volume = interface.QueryInterface(IAudioEndpointVolume)
 
+        current = volume.GetMasterVolumeLevelScalar()
+
+        if direction == "increase":
+            if current >= 1.0:
+                return "Volume is already at maximum."
+            new_volume = min(current + (percent / 100.0), 1.0)
+        else:  # decrease
+            if current <= 0.0:
+                return "Volume is already at minimum."
+            new_volume = max(current - (percent / 100.0), 0.0)
+
+        volume.SetMasterVolumeLevelScalar(new_volume, None)
+        return f"Volume {direction}d by {percent}%."
 
     def evaluate_expression(self, expression):
         # replace "degrees" with "*pi/180" to convert to radians
@@ -460,7 +478,6 @@ class Assistant:
                         elif "weather" in text.lower():
                             self.handle_weather(text)
                         
-
                         elif "time" in text.lower():
                             now = datetime.now()
                             current_time = now.strftime("%I:%M %p")
@@ -474,7 +491,39 @@ class Assistant:
                             self.speaker.say(f"Today is {today}")
                             self.speaker.runAndWait()
 
- 
+                        elif "volume" in text.lower():
+                            try:
+                                # Normalize the input
+                                text = text.lower()
+
+                                if "increase volume by" in text:
+                                    match = re.search(r"increase volume by (\d+)", text)
+                                    if match:
+                                        percent = int(match.group(1))
+                                        message = self.adjust_volume("increase", percent)
+                                        self.speaker.say(message)
+                                    else:
+                                        self.speaker.say("Please specify how much to increase the volume by.")
+
+                                elif "decrease volume by" in text:
+                                    match = re.search(r"decrease volume by (\d+)", text)
+                                    if match:
+                                        percent = int(match.group(1))
+                                        message = self.adjust_volume("decrease", percent)
+                                        self.speaker.say(message)
+                                    else:
+                                        self.speaker.say("Please specify how much to decrease the volume by.")
+
+                                else:
+                                    self.speaker.say("Please say something like 'increase volume by 30 percent'.")
+
+                                self.speaker.runAndWait()
+
+                            except Exception as e:
+                                print("Error adjusting volume:", e)
+                                self.speaker.say("Sorry, I couldn't change the volume.")
+                                self.speaker.runAndWait()
+                            
                                                      
                         else:
                             print("searching.... "+ text)
