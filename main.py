@@ -292,28 +292,6 @@ class Assistant:
             self.speaker.runAndWait()
 
 
-    def check_unread_emails_with_senders(self):
-        # Load token.json or however you're authenticating
-        creds = Credentials.from_authorized_user_file('token.json')
-        service = build('gmail', 'v1', credentials=creds)
-
-        results = service.users().messages().list(userId='me', labelIds=['INBOX'], q="is:unread").execute()
-        messages = results.get('messages', [])
-
-        if not messages:
-            return "You have no unread emails."
-
-        senders = []
-        for message in messages[:5]:  # Limit to 5 emails for sanity
-            msg = service.users().messages().get(userId='me', id=message['id'], format='metadata', metadataHeaders=['From']).execute()
-            headers = msg['payload']['headers']
-            for header in headers:
-                if header['name'] == 'From':
-                    senders.append(header['value'])
-                    break
-
-        return f"You have {len(messages)} unread emails. The first five are from: " + ", ".join(senders)
-
        
     def run_assistant(self):
         active = False
@@ -553,12 +531,13 @@ class Assistant:
                                 self.speaker.runAndWait()
 
                         elif "check my email" in text or "do i have any new emails" in text:
-                            self.speaker.say("Let me check your inbox.")
-                            self.speaker.runAndWait()
-                            response = self.check_unread_emails_with_senders()
-                            print(response)
-                            self.speaker.say(response)
-                            self.speaker.runAndWait()
+                          self.speaker.say("Sorry this function is not supported yet")  
+                          #  self.speaker.say("Let me check your inbox.")
+                          #  self.speaker.runAndWait()
+                          #  response = self.check_unread_emails_with_senders()
+                          #  print(response)
+                          #  self.speaker.say(response)
+                          #  self.speaker.runAndWait()
                                     
                         else:
                             print("searching.... "+ text)
