@@ -17,6 +17,13 @@ import json
 import re
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 from comtypes import CLSCTX_ALL
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
 
 
 class Assistant:
@@ -26,6 +33,8 @@ class Assistant:
         self.speaker = tts.init()
         self.speaker.setProperty("rate", 200)
         self.speaker.setProperty("volume", 1.0)
+
+        
 
         self.window = customtkinter.CTk()
         customtkinter.set_appearance_mode("dark")
@@ -80,7 +89,6 @@ class Assistant:
         print(f"bout to calculate  ==>> {expr}")
         return float(expr.evalf())  #  Convert to float here
 
-
     def Search(self, text):    
         print("In Search method")
         found = False
@@ -98,7 +106,6 @@ class Assistant:
         if not found:
             print("No valid results found or search was blocked.")
 
-    
     def spoken_to_math(self, expr):
         
 
@@ -186,7 +193,6 @@ class Assistant:
 
         return expr
 
-
     def get_location_key(self, city_name, api_key):
         url = f"http://dataservice.accuweather.com/locations/v1/cities/search"
         params = {
@@ -221,7 +227,6 @@ class Assistant:
             return f"The current weather in {localized_name} is {text} with a temperature of {temp}°C."
         
         return f"Weather info for {city_name} is unavailable."
-
 
     def handle_weather(self, user_text):
         api_key = "N6f3inYvZxWJs10rlJD9Az81Qzm04BEM"
@@ -285,18 +290,41 @@ class Assistant:
             print("Weather error:", e)
             self.speaker.say("There was an error getting the weather.")
             self.speaker.runAndWait()
-    
-            
+
+
+    def check_unread_emails_with_senders(self):
+        # Load token.json or however you're authenticating
+        creds = Credentials.from_authorized_user_file('token.json')
+        service = build('gmail', 'v1', credentials=creds)
+
+        results = service.users().messages().list(userId='me', labelIds=['INBOX'], q="is:unread").execute()
+        messages = results.get('messages', [])
+
+        if not messages:
+            return "You have no unread emails."
+
+        senders = []
+        for message in messages[:5]:  # Limit to 5 emails for sanity
+            msg = service.users().messages().get(userId='me', id=message['id'], format='metadata', metadataHeaders=['From']).execute()
+            headers = msg['payload']['headers']
+            for header in headers:
+                if header['name'] == 'From':
+                    senders.append(header['value'])
+                    break
+
+        return f"You have {len(messages)} unread emails. The first five are from: " + ", ".join(senders)
+
+       
     def run_assistant(self):
         active = False
         while True:
             try:
                 with speech_recognition.Microphone() as mic :
-                    print("in here > things started")
+                    print("things started")
                     self.recognizer.adjust_for_ambient_noise(mic, duration=0.1)
-                    print("in here2 > actively listening")
+                    print("actively listening")
                     audio = self.recognizer.listen(mic)
-                    print("in here3 > listened")
+                    print(" listened")
                     text = self.recognizer.recognize_google(audio)
                     text= text.lower()
                     print(f"Recognized ---> {text}")
@@ -362,7 +390,6 @@ class Assistant:
 
                                     self.speaker.say("Sorry, I didn't catch that.")
                                     self.speaker.runAndWait()
-                        
                         
                         elif "calculate" in text or "how much is" in text :
                             try:
@@ -456,6 +483,7 @@ class Assistant:
                         elif text == "who created you" :
                             self.speaker.say("Mr.NiloyBlueee created me!")
                             wb.open_new_tab("https://www.linkedin.com/in/niloy-blueee-30787b294/")
+                            print("Mr.NiloyBlueee created me!")
                             self.label.configure(text_color="white")
                             self.speaker.runAndWait()
 
@@ -523,8 +551,15 @@ class Assistant:
                                 print("Error adjusting volume:", e)
                                 self.speaker.say("Sorry, I couldn't change the volume.")
                                 self.speaker.runAndWait()
-                            
-                                                     
+
+                        elif "check my email" in text or "do i have any new emails" in text:
+                            self.speaker.say("Let me check your inbox.")
+                            self.speaker.runAndWait()
+                            response = self.check_unread_emails_with_senders()
+                            print(response)
+                            self.speaker.say(response)
+                            self.speaker.runAndWait()
+                                    
                         else:
                             print("searching.... "+ text)
                             self.speaker.say(f"trying to find the best match for {text}")
