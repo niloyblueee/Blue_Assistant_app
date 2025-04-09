@@ -547,7 +547,8 @@ class Assistant:
                             self.label.configure(text_color="white") 
 
             except:
-                self.label.configure(text_color="white")   
+                self.label.configure(text_color="white")
+                print("Try Saying Again")   
                 continue          
 
 Assistant()
