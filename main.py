@@ -291,6 +291,11 @@ class Assistant:
             self.speaker.say("There was an error getting the weather.")
             self.speaker.runAndWait()
 
+    def glow_effect(self, color="#00ffff", duration=1500):
+        def pulse():
+            self.label.configure(text_color=color)
+            self.label.after(duration, lambda: self.label.configure(text_color="white"))
+        pulse()
 
        
     def run_assistant(self):
@@ -306,245 +311,251 @@ class Assistant:
                     text = self.recognizer.recognize_google(audio)
                     text= text.lower()
                     print(f"Recognized ---> {text}")
-                    if "hey blue" in text:
-                        print("initiated")
-                        active = True #active or not
-                        self.speaker.say("hello, how may i help?")
-                        self.label.configure(text_color="#0eb9ff")
-                        self.speaker.runAndWait()
-                        audio = self.recognizer.listen(mic)
-                        text = self.recognizer.recognize_google(audio)
-                        text = text.lower()
-                        print("recognized audio")
+
+                    if not text.startswith("hey blue"):
+                        print("Say hey blue then Command to work")
+                        continue
                     
-                    if active is True:
+                    print("initiated")
+                    
+                    self.glow_effect("#00ffff", duration=1500)
+                    self.speaker.say("hello, how may i help?")
+                    self.speaker.runAndWait()
 
-                        if text == 'stop':
-                            print("stoping")
-                            self.speaker.say("Certainly")
-                            active = False
-                            self.speaker.runAndWait()
-                            self.window.destroy()
-                            os._exit(0)
-                            break 
+                    audio = self.recognizer.listen(mic)
+                    text = self.recognizer.recognize_google(audio)
+                    text = text.lower()
+                    print("recognized audio")
+                    
+                
 
-                        elif "play" in text :
+                    if text == 'stop':
+                        print("stoping")
+                        self.speaker.say("Certainly")
+                        active = False
+                        self.speaker.runAndWait()
+                        self.window.destroy()
+                        os._exit(0)
+                        break 
 
-                            self.speaker.say(f"okay trying to play {text[4:]}")
-                            self.speaker.runAndWait()
-                            self.label.configure(text_color="red")
-                            print("searching")
-                            print(text)
+                    elif "play" in text :
 
-                            #self.search(text) <==== method 1
-                            #wb.open_new_tab(f"https://www.youtube.com/results?search_query={text}") <==== method 2
-                            
-                            videosSearch = VideosSearch(text, limit=1) #<==== method 3
-                            first_result = videosSearch.result()['result'][0]['link']
-                            print(first_result)
-                            wb.open_new_tab(first_result)
+                        self.speaker.say(f"okay trying to play {text[4:]}")
+                        self.speaker.runAndWait()
+                        self.label.configure(text_color="red")
+                        print("searching")
+                        print(text)
 
-                            self.label.configure(text_color="white") 
-
-                        elif text == "turn off pc":
-                            self.speaker.say("ARE U SURE TO TURN OFF PC? Say Affirmative or Negative")
-                            self.speaker.runAndWait()
-                            with speech_recognition.Microphone() as confirm_mic:
-                                self.recognizer.adjust_for_ambient_noise(confirm_mic, duration=0.2)
-                                print("Listening for confirmation...")
-                                audio = self.recognizer.listen(confirm_mic)
-                                try:
-                                    confirm_text = self.recognizer.recognize_google(audio).lower()
-                                    print(f"Confirmation received: {confirm_text}")
-                                    if "affirmative" in confirm_text:
-                                        print("damn bro")
-                                        # os.system('shutdown /s /t 0')
-                                    else:
-                                        self.speaker.say("okay doing nothing")    
-                                        self.label.configure(text_color="white") 
-                                        self.speaker.runAndWait()
-                                except Exception as e:
-                                    print("Error during confirmation:", repr(e))
-
-                                    self.speaker.say("Sorry, I didn't catch that.")
-                                    self.speaker.runAndWait()
+                        #self.search(text) <==== method 1
+                        #wb.open_new_tab(f"https://www.youtube.com/results?search_query={text}") <==== method 2
                         
-                        elif "calculate" in text or "how much is" in text :
+                        videosSearch = VideosSearch(text, limit=1) #<==== method 3
+                        first_result = videosSearch.result()['result'][0]['link']
+                        print(first_result)
+                        wb.open_new_tab(first_result)
+
+                        self.label.configure(text_color="white") 
+
+                    elif text == "turn off pc":
+                        self.speaker.say("ARE U SURE TO TURN OFF PC? Say Affirmative or Negative")
+                        self.speaker.runAndWait()
+                        with speech_recognition.Microphone() as confirm_mic:
+                            self.recognizer.adjust_for_ambient_noise(confirm_mic, duration=0.2)
+                            print("Listening for confirmation...")
+                            audio = self.recognizer.listen(confirm_mic)
                             try:
-                                expression = text.replace("calculate", "").replace("how much is", "").strip()
-                                expression = self.spoken_to_math(expression)
-                                print("Parsed Expression:", expression)
-
-                                result = self.evaluate_expression(expression)
-                                print(round(result,2))
-                                self.speaker.say(f"The result is {round(result, 2)}")
-                                self.speaker.runAndWait()
-                                self.label.configure(text_color="#FFD700")
-
-                            except Exception as e:
-                                print("Math error:", e)
-                                self.speaker.say("Sorry, I couldn't calculate that.")
-                                self.speaker.runAndWait()
-
-                        elif text.startswith("what is"):  # Only checking "what is" questions
-                            expression = text.replace("what is", "").strip()
-                            
-                            if "weather" in expression or any(word in expression for word in ["sunny", "rainy", "umbrella", "hot", "cold", "temperature","raining"]):
-                                self.handle_weather(expression)
-
-                            elif "time" in expression:
-                                now = datetime.now()
-                                current_time = now.strftime("%I:%M %p")
-                                print("Time:", current_time)
-                                self.speaker.say(f"The current time is {current_time}")
-                                self.speaker.runAndWait()
-
-                            # 📅 Date check
-                            elif "date" in expression or "day" in expression:
-                                today = datetime.now().strftime("%A, %B %d, %Y")
-                                print("Date:", today)
-                                self.speaker.say(f"Today is {today}")
-                                self.speaker.runAndWait()
-
-                                
-                            else:
-                                math_keywords = { 
-                                    'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
-                                    'divided by': '/', 'over': '/', 'mod': '%', 'modulo': '%','by': '/',
-                                    'power': '**', 'to the power of': '**', 'into': '*',
-                                    'equals': '=', 'equal to': '=',
-                                    '+': '+',  
-                                    '-': '-', 
-                                    'x': '*', 
-                                    '/': '/',
-                                    
-                                    'sin': 'sin', 'cosine': 'cos', 'cos': 'cos' , 'tangent': 'tan', 'tan':'tan',
-                                    'pi': 'pi' ,
-                                    'log': 'log',        # log base 10
-                                    'natural log': 'ln',  # ln = natural logarithm
-                                    'loan': 'ln',
-                                    'lon': 'ln','sin inverse': 'asin', 'cos inverse': 'acos', 'tan inverse': 'atan',
-                                    'antilog': '10 **',        'to the power of': '**',
-                                    'to the power ' : '**',
-                                    'divided by': '/',
-                                    'multiplied by': '*',
-                                    'equal to': '=',
-                                    'square root of': 'sqrt',
-                                    'cube root of': 'cbrt',
-                                    'factorial' : 'factorial'
-                                }
-
-                                # Check if the expression contains a math-related word
-                                if any(word in expression.split() for word in math_keywords):
-                                    # Call your math evaluation function
-                                    expression = self.spoken_to_math(expression)  # Convert to math syntax
-                                    print("Parsed Expression:", expression)
-                                    
-                                    try:
-                                        result = self.evaluate_expression(expression)
-                                        print(round(result,2))
-                                        self.speaker.say(f"The result is {round(result, 2)}")
-                                        self.speaker.runAndWait()
-                                        self.label.configure(text_color="#FFD700")
-                                    except Exception as e:
-                                        print("Math error:", e)
-                                        self.speaker.say("Sorry, I couldn't calculate that.")
-                                        self.speaker.runAndWait
-                                
+                                confirm_text = self.recognizer.recognize_google(audio).lower()
+                                print(f"Confirmation received: {confirm_text}")
+                                if "affirmative" in confirm_text:
+                                    print("damn bro")
+                                    # os.system('shutdown /s /t 0')
                                 else:
-                                    # If it's not a math query, do a Google search
-                                    self.Search(text)
+                                    self.speaker.say("okay doing nothing")    
+                                    self.label.configure(text_color="white") 
+                                    self.speaker.runAndWait()
+                            except Exception as e:
+                                print("Error during confirmation:", repr(e))
+
+                                self.speaker.say("Sorry, I didn't catch that.")
+                                self.speaker.runAndWait()
+                    
+                    elif "calculate" in text or "how much is" in text :
+                        try:
+                            expression = text.replace("calculate", "").replace("how much is", "").strip()
+                            expression = self.spoken_to_math(expression)
+                            print("Parsed Expression:", expression)
+
+                            result = self.evaluate_expression(expression)
+                            print(round(result,2))
+                            self.speaker.say(f"The result is {round(result, 2)}")
+                            self.speaker.runAndWait()
+                            self.label.configure(text_color="#FFD700")
+
+                        except Exception as e:
+                            print("Math error:", e)
+                            self.speaker.say("Sorry, I couldn't calculate that.")
+                            self.speaker.runAndWait()
+
+                    elif text.startswith("what is"):  # Only checking "what is" questions
+                        expression = text.replace("what is", "").strip()
                         
-                        elif "umbrella" and "take" in text:
-                            self.handle_weather(text)
+                        if "weather" in expression or any(word in expression for word in ["sunny", "rainy", "umbrella", "hot", "cold", "temperature","raining"]):
+                            self.handle_weather(expression)
 
-                        elif text == "who created you" :
-                            self.speaker.say("Mr.NiloyBlueee created me!")
-                            wb.open_new_tab("https://www.linkedin.com/in/niloy-blueee-30787b294/")
-                            print("Mr.NiloyBlueee created me!")
-                            self.label.configure(text_color="white")
-                            self.speaker.runAndWait()
-
-                        elif "open" in text :
-                            print(text)
-                            self.speaker.say(f"trying to open {text[4:]}")
-                            self.speaker.runAndWait()
-                            self.label.configure(text_color="#2E8B57")
-                            open(text.split()[1])
-                            self.label.configure(text_color="white") 
-                               
-                        elif "close" in text :
-                            print(text)
-                            self.speaker.say(f"trying to close {text[5:]}")
-                            self.speaker.runAndWait()
-                            self.label.configure(text_color="#880808")
-                            close(text.split()[1])
-                            self.label.configure(text_color="white")
-
-                        elif "weather" in text.lower():
-                            self.handle_weather(text)
-                        
-                        elif "time" in text.lower():
+                        elif "time" in expression:
                             now = datetime.now()
                             current_time = now.strftime("%I:%M %p")
                             print("Time:", current_time)
                             self.speaker.say(f"The current time is {current_time}")
                             self.speaker.runAndWait()
 
-                        elif "date" in text.lower() or "day" in text.lower():
+                        # 📅 Date check
+                        elif "date" in expression or "day" in expression:
                             today = datetime.now().strftime("%A, %B %d, %Y")
                             print("Date:", today)
                             self.speaker.say(f"Today is {today}")
                             self.speaker.runAndWait()
 
-                        elif "volume" in text.lower():
-                            try:
-                                # Normalize the input
-                                text = text.lower()
-
-                                if "increase volume by" in text:
-                                    match = re.search(r"increase volume by (\d+)", text)
-                                    if match:
-                                        percent = int(match.group(1))
-                                        message = self.adjust_volume("increase", percent)
-                                        self.speaker.say(message)
-                                    else:
-                                        self.speaker.say("Please specify how much to increase the volume by.")
-
-                                elif "decrease volume by" in text:
-                                    match = re.search(r"decrease volume by (\d+)", text)
-                                    if match:
-                                        percent = int(match.group(1))
-                                        message = self.adjust_volume("decrease", percent)
-                                        self.speaker.say(message)
-                                    else:
-                                        self.speaker.say("Please specify how much to decrease the volume by.")
-
-                                else:
-                                    self.speaker.say("Please say something like 'increase volume by 30 percent'.")
-
-                                self.speaker.runAndWait()
-
-                            except Exception as e:
-                                print("Error adjusting volume:", e)
-                                self.speaker.say("Sorry, I couldn't change the volume.")
-                                self.speaker.runAndWait()
-
-                        elif "check my email" in text or "do i have any new emails" in text:
-                          self.speaker.say("Sorry this function is not supported yet")  
-                          #  self.speaker.say("Let me check your inbox.")
-                          #  self.speaker.runAndWait()
-                          #  response = self.check_unread_emails_with_senders()
-                          #  print(response)
-                          #  self.speaker.say(response)
-                          #  self.speaker.runAndWait()
-                                    
+                            
                         else:
-                            print("searching.... "+ text)
-                            self.speaker.say(f"trying to find the best match for {text}")
+                            math_keywords = { 
+                                'plus': '+', 'sumation':'+' , 'minus': '-', 'times': '*', 'multiplied with': '*', 'multiplied by' : '*',
+                                'divided by': '/', 'over': '/', 'mod': '%', 'modulo': '%','by': '/',
+                                'power': '**', 'to the power of': '**', 'into': '*',
+                                'equals': '=', 'equal to': '=',
+                                '+': '+',  
+                                '-': '-', 
+                                'x': '*', 
+                                '/': '/',
+                                
+                                'sin': 'sin', 'cosine': 'cos', 'cos': 'cos' , 'tangent': 'tan', 'tan':'tan',
+                                'pi': 'pi' ,
+                                'log': 'log',        # log base 10
+                                'natural log': 'ln',  # ln = natural logarithm
+                                'loan': 'ln',
+                                'lon': 'ln','sin inverse': 'asin', 'cos inverse': 'acos', 'tan inverse': 'atan',
+                                'antilog': '10 **',        'to the power of': '**',
+                                'to the power ' : '**',
+                                'divided by': '/',
+                                'multiplied by': '*',
+                                'equal to': '=',
+                                'square root of': 'sqrt',
+                                'cube root of': 'cbrt',
+                                'factorial' : 'factorial'
+                            }
+
+                            # Check if the expression contains a math-related word
+                            if any(word in expression.split() for word in math_keywords):
+                                # Call your math evaluation function
+                                expression = self.spoken_to_math(expression)  # Convert to math syntax
+                                print("Parsed Expression:", expression)
+                                
+                                try:
+                                    result = self.evaluate_expression(expression)
+                                    print(round(result,2))
+                                    self.speaker.say(f"The result is {round(result, 2)}")
+                                    self.speaker.runAndWait()
+                                    self.label.configure(text_color="#FFD700")
+                                except Exception as e:
+                                    print("Math error:", e)
+                                    self.speaker.say("Sorry, I couldn't calculate that.")
+                                    self.speaker.runAndWait
+                            
+                            else:
+                                # If it's not a math query, do a Google search
+                                self.Search(text)
+                    
+                    elif "umbrella" and "take" in text:
+                        self.handle_weather(text)
+
+                    elif text == "who created you" :
+                        self.speaker.say("Mr.NiloyBlueee created me!")
+                        wb.open_new_tab("https://www.linkedin.com/in/niloy-blueee-30787b294/")
+                        print("Mr.NiloyBlueee created me!")
+                        self.label.configure(text_color="white")
+                        self.speaker.runAndWait()
+
+                    elif "open" in text :
+                        print(text)
+                        self.speaker.say(f"trying to open {text[4:]}")
+                        self.speaker.runAndWait()
+                        self.label.configure(text_color="#2E8B57")
+                        open(text.split()[1])
+                        self.label.configure(text_color="white") 
+                            
+                    elif "close" in text :
+                        print(text)
+                        self.speaker.say(f"trying to close {text[5:]}")
+                        self.speaker.runAndWait()
+                        self.label.configure(text_color="#880808")
+                        close(text.split()[1])
+                        self.label.configure(text_color="white")
+
+                    elif "weather" in text.lower():
+                        self.handle_weather(text)
+                    
+                    elif "time" in text.lower():
+                        now = datetime.now()
+                        current_time = now.strftime("%I:%M %p")
+                        print("Time:", current_time)
+                        self.speaker.say(f"The current time is {current_time}")
+                        self.speaker.runAndWait()
+
+                    elif "date" in text.lower() or "day" in text.lower():
+                        today = datetime.now().strftime("%A, %B %d, %Y")
+                        print("Date:", today)
+                        self.speaker.say(f"Today is {today}")
+                        self.speaker.runAndWait()
+
+                    elif "volume" in text.lower():
+                        try:
+                            # Normalize the input
+                            text = text.lower()
+
+                            if "increase volume by" in text : 
+                                match = re.search(r"increase volume by (\d+)", text)
+                                if match:
+                                    percent = int(match.group(1))
+                                    message = self.adjust_volume("increase", percent)
+                                    self.speaker.say(message)
+                                else:
+                                    self.speaker.say("Please specify how much to increase the volume by.")
+
+                            elif "decrease volume by" in text or "reduce volume by" in text :
+                                match = re.search(r"decrease volume by (\d+)", text)
+                                match = re.search(r"reduce volume by (\d+)", text)
+                                if match:
+                                    percent = int(match.group(1))
+                                    message = self.adjust_volume("decrease", percent)
+                                    self.speaker.say(message)
+                                else:
+                                    self.speaker.say("Please specify how much to decrease the volume by.")
+
+                            else:
+                                self.speaker.say("Please say something like 'increase volume by 30 percent'.")
+
                             self.speaker.runAndWait()
-                            self.Search(text)
-                            self.label.configure(text_color="white") 
+
+                        except Exception as e:
+                            print("Error adjusting volume:", e)
+                            self.speaker.say("Sorry, I couldn't change the volume.")
+                            self.speaker.runAndWait()
+
+                    elif "check my email" in text or "do i have any new emails" in text:
+                        self.speaker.say("Sorry this function is not supported yet")  
+                        #  self.speaker.say("Let me check your inbox.")
+                        #  self.speaker.runAndWait()
+                        #  response = self.check_unread_emails_with_senders()
+                        #  print(response)
+                        #  self.speaker.say(response)
+                        #  self.speaker.runAndWait()
+                                
+                    else:
+                        print("searching.... "+ text)
+                        self.speaker.say(f"trying to find the best match for {text}")
+                        self.speaker.runAndWait()
+                        self.Search(text)
+                        self.label.configure(text_color="white") 
 
             except:
                 self.label.configure(text_color="white")
